@@ -1,24 +1,25 @@
 import numpy as np
 from tqdm import tqdm
-def preprocess_train_data(data, data_set='amateur'):
+# Extracts corresponding names, frames and masks from all the labeled frames.
+def preprocess_train_data(data):
     video_frames = []
     mask_frames = []
     names = []
     for item in tqdm(data):
-        if item['dataset'] == data_set:
-            video = item['video']
-            name = item['name']
-            height, width, n_frames = video.shape
-            mask = np.zeros((height, width, n_frames), dtype=np.bool)
-            for frame in item['frames']:
-                mask[:, :, frame] = item['label'][:, :, frame]
-                video_frame = video[:, :, frame]
-                mask_frame = mask[:, :, frame]
-                video_frame = np.expand_dims(video_frame, axis=2).astype(np.float32)
-                mask_frame = np.expand_dims(mask_frame, axis=2).astype(np.int32)
-                video_frames.append(video_frame)
-                mask_frames.append(mask_frame)
-                names.append(name)
+        video = item['video']
+        name = item['name']
+        height, width, n_frames = video.shape
+        mask = np.zeros((height, width, n_frames), dtype=np.bool)
+        # for each annotated frame, extract the video frame and corresponding mask
+        for frame in item['frames']:
+            mask[:, :, frame] = item['label'][:, :, frame]
+            video_frame = video[:, :, frame]
+            mask_frame = mask[:, :, frame]
+            video_frame = np.expand_dims(video_frame, axis=2).astype(np.float32)
+            mask_frame = np.expand_dims(mask_frame, axis=2).astype(np.int32)
+            video_frames.append(video_frame)
+            mask_frames.append(mask_frame)
+            names.append(name)
     return names, video_frames, mask_frames
 
 def preprocess_test_data(data):
