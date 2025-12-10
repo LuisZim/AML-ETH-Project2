@@ -21,3 +21,6 @@ env/
 *.csv
 *.h5
 *.pkl
+
+# weights and models
+*.pth
