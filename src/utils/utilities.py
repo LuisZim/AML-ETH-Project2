@@ -2,14 +2,16 @@ import numpy as np
 import torch
 from tqdm import tqdm
 import cv2
+import gzip
+import pickle
 
 # Extracts corresponding names, frames and masks from all the labeled frames.
+# Also rescales frames and masks to fixed size HxW.
 # returns video_frames (N, H, W, 1), mask_frames (N, H, W, 1) and names (N,)
-def preprocess_train_data(data):
+def preprocess_train_data(data, H=256, W=256):
     video_frames = []
     mask_frames = []
     names = []
-    H, W = 256, 256
     for item in tqdm(data):
         video = item['video']
         name = item['name']
@@ -79,3 +81,8 @@ def get_mask_from_image(image, model, H, W):
         
         mask_resized = cv2.resize(mask_np, (W_orig, H_orig), interpolation=cv2.INTER_NEAREST)
     return mask_resized
+
+def load_zipped_pickle(filename):
+    with gzip.open(filename, 'rb') as f:
+        loaded_object = pickle.load(f)
+        return loaded_object
