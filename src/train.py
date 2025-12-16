@@ -1,4 +1,7 @@
 from tqdm.auto import tqdm
+import torch
+
+
 # Training scaffold (to be adapted to your dataset loader)
 
 def train_one_epoch(model, dataloader, optimizer, criterion, device):

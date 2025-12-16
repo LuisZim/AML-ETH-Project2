@@ -16,9 +16,10 @@ class BBoxDataset(Dataset):
     
     Generates samples: one sample per frame, all frames share the same bbox.
     """
-    def __init__(self, data, target_size=(256, 256)):
+    def __init__(self, data, target_size=(256, 256), augment=True):
         self.data = data
         self.target_size = target_size
+        self.augment = augment
         self.samples = []
         
         # Build sample list: each frame becomes one sample with the same video-level bbox
@@ -79,6 +80,42 @@ class BBoxDataset(Dataset):
         
         # Extract bbox from original mask (before resizing)
         bbox_orig = self._extract_bbox_from_mask(box_mask)
+
+        # === AUGMENTATION ===
+        if self.augment:
+            # Random rotation (small angles)
+            if np.random.rand() > 0.7:
+                angle = np.random.uniform(-15, 15)
+                h, w = frame.shape
+                center = (w // 2, h // 2)
+                rot_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+                frame = cv2.warpAffine(frame, rot_matrix, (w, h), borderMode=cv2.BORDER_REFLECT)
+            
+            # Random horizontal flip
+            if np.random.rand() > 0.5:
+                frame = cv2.flip(frame, 1)
+                # Adjust bbox for flip: x_min, y_min, x_max, y_max -> (1-x_max), y_min, (1-x_min), y_max
+                bbox_orig = np.array([1 - bbox_orig[2], bbox_orig[1], 1 - bbox_orig[0], bbox_orig[3]])
+            
+            # Random brightness
+            if np.random.rand() > 0.6:
+                brightness = np.random.uniform(0.7, 1.3)
+                frame = np.clip(frame * brightness, 0, 255)
+            
+            # Random contrast
+            if np.random.rand() > 0.6:
+                contrast = np.random.uniform(0.7, 1.3)
+                frame = np.clip((frame - 128) * contrast + 128, 0, 255)
+            
+            # Random Gaussian blur
+            if np.random.rand() > 0.7:
+                frame = cv2.GaussianBlur(frame, (5, 5), 0)
+            
+            # Random noise
+            if np.random.rand() > 0.6:
+                noise = np.random.normal(0, 8, frame.shape)
+                frame = np.clip(frame + noise, 0, 255)
+
         
         # Resize frame to target size
         frame_resized = cv2.resize(frame, self.target_size, interpolation=cv2.INTER_LINEAR)

@@ -17,14 +17,15 @@ def train_bbox_regressor(
     train_loader,
     val_loader,
     save_dir,
-    epochs=50,
-    lr=1e-3,
-    weight_decay=1e-4,
+    epochs=20,
+    lr=1e-2,
+    weight_decay=1e-3,
     device='cuda',
-    model_name='bbox_regressor'
+    patience=10
+
 ):
     """
-    Train BBox Regressor
+    Train BBox Regressor with early stopping and stronger L2 regularization.
     """
     Path(save_dir).mkdir(exist_ok=True)
     
@@ -78,11 +79,18 @@ def train_bbox_regressor(
         
         print(f"Epoch {epoch+1}: Train Loss={train_loss:.4f}, Val Loss={val_loss:.4f}")
         
-        # Save best model
+        # Early Stopping
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), f"{save_dir}/{model_name}_best.pth")
-            print(f"✓ Best model saved (Val Loss={val_loss:.4f})")
+            patience_counter = 0
+            torch.save(model.state_dict(), f"{save_dir}/bbox_regressor_best_early_stopping.pth")
+            print(" ✓ (saved)")
+        else:
+            patience_counter += 1
+            print(f" (patience {patience_counter}/{patience})")
+            if patience_counter >= patience:
+                print(f"\n✓ Early stopping at epoch {epoch+1}")
+                break
         
         # Scheduler step
         scheduler.step(val_loss)

@@ -41,11 +41,13 @@ class BBoxRegressor(nn.Module):
             nn.Linear(in_features, 256),
             nn.ReLU(),
             nn.Dropout(dropout),
+            nn.BatchNorm1d(256),  # ← Neu: BatchNorm
             nn.Linear(256, 128),
             nn.ReLU(),
             nn.Dropout(dropout),
+            nn.BatchNorm1d(128),  # ← Neu: BatchNorm
             nn.Linear(128, 4),
-            nn.Sigmoid()  # Output in [0, 1]
+            nn.Sigmoid()
         )
     
     def forward(self, x):

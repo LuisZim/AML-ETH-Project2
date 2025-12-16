@@ -59,6 +59,22 @@ def make_train_test_split(data, test_ratio=0.2, random_seed=42):
     test_data = [data[i] for i in test_indices]
     return train_data, test_data
 
+def stratified_split_by_dataset(data, val_ratio=0.2, seed=42):
+    rng = np.random.RandomState(seed)
+    groups = {}
+    for i, it in enumerate(data):
+        groups.setdefault(it.get('dataset','unknown'), []).append(i)
+    train_idx, val_idx = [], []
+    for k, idxs in groups.items():
+        idxs = np.array(idxs); perm = rng.permutation(len(idxs))
+        n_val = max(1, int(len(idxs) * val_ratio))
+        val_idx += idxs[perm[:n_val]].tolist()
+        train_idx += idxs[perm[n_val:]].tolist()
+    train = [data[i] for i in train_idx]
+    val   = [data[i] for i in val_idx]
+    print({k: {'train': sum(i in train_idx for i in v), 'val': sum(i in val_idx for i in v)} for k,v in groups.items()})
+    return train, val
+
 def get_mask_from_image(image, model, H, W):
     device = next(model.parameters()).device
     # image has shape (H_orig, W_orig)
