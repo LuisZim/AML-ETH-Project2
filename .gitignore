@@ -8,7 +8,7 @@ __pycache__/
 *.pyd
 
 # Virtual environment
-.venv/
+.venv*
 venv/
 env/
 
@@ -25,3 +25,6 @@ env/
 
 # weights and models
 *.pth
+
+# cursor rules
+.cursorrules
