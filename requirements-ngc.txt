@@ -1,0 +1,27 @@
+## Notebook-Umgebung
+jupyterlab>=4.0
+ipykernel>=6.0
+notebook>=7.0
+
+## Core-Numerik
+numpy>=1.24,<2
+
+## PyTorch + Vision
+torch==2.6.0
+torchvision==0.21.0
+
+## Datensätze, Training & Progress Bars
+tqdm>=4.66
+
+## Computer Vision / Bildverarbeitung
+opencv-python-headless>=4.9
+scikit-image>=0.22
+
+## Plotting & Visualisierung
+matplotlib>=3.8
+ipywidgets>=8.0
+
+## Sonstiges
+imageio>=2.34
+
+
