@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI script to augment the raw training data with a single augmentation strategy.
+CLI script to augment the training data with a single augmentation strategy.
 
 # Exapmle Usage
 ## Rotation
@@ -31,7 +31,7 @@ python scripts-lm/augmentation.py \
 --------------------------------
 
 It:
-- loads `data/raw/train.pkl` (gzipped pickle, same format as in the notebooks),
+- loads per default `data/splitted/train_split.pkl` (gzipped pickle, same format as in the notebooks),
 - applies ONE of the 5 augmentation strategies to each sample,
 - creates N augmented versions per original sample (default: 1),
 - writes only the augmented samples (without the original ones) to a gzipped pickle file at the given output path.
@@ -507,7 +507,7 @@ def augment_sample_single_strategy(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Augment raw/train.pkl with a single augmentation strategy."
+        description="Augment per default data/splitted/train_split.pkl with a single augmentation strategy."
     )
     parser.add_argument(
         "--strategy",
@@ -530,7 +530,7 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help="Path to input train.pkl (gzipped pickle). "
-             "Defaults to BASE_PATH/data/raw/train.pkl if not set.",
+             "Defaults to BASE_PATH/data/splitted/train_split.pkl if not set.",
     )
     parser.add_argument(
         "--num-augmentations",
@@ -568,7 +568,7 @@ def main() -> None:
     base_path = script_path.parents[1]
 
     if args.input is None:
-        input_path = base_path / "data" / "raw" / "train.pkl"
+        input_path = base_path / "data" / "splitted" / "train_split.pkl"
     else:
         input_path = Path(args.input)
 
