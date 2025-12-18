@@ -41,7 +41,7 @@ def eval_one_epoch(model, dataloader, criterion, device):
     return running_loss / len(dataloader.dataset)
 
 
-def train_model(model, train_loader, val_loader, optimizer, criterion, device, epochs, save_path, patience=5):
+def train_model(model, train_loader, optimizer, criterion, device, epochs, save_path, val_loader=None, patience=5):
     model = model.to(device)
     best_val_loss = float('inf')
     patience_counter = 0
@@ -52,23 +52,27 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, device, e
         train_loss = train_one_epoch(model, train_loader, optimizer, criterion, device)
 
         # Validation
-        val_loss = eval_one_epoch(model, val_loader, criterion, device)
+        val_loss = eval_one_epoch(model, val_loader, criterion, device) if val_loader is not None else None
 
-        print(f"Epoch {epoch+1}: Train Loss={train_loss:.4f}, Val Loss={val_loss:.4f}")
+        print(f"Epoch {epoch+1}: Train Loss={train_loss:.4f}, Val Loss={val_loss:.4f}" if val_loss is not None else f"Epoch {epoch+1}: Train Loss={train_loss:.4f}")
 
-        # Early Stopping
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            patience_counter = 0
-            torch.save(model.state_dict(), f"{save_path}")
-            print(" ✓ (saved)")
-        else:
-            patience_counter += 1
-            print(f" (patience {patience_counter}/{patience})")
-            if patience_counter >= patience:
-                print(f"\n✓ Early stopping at epoch {epoch+1}")
-                break
+        # Early Stopping if we have validation set
+        if val_loader is not None:
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                patience_counter = 0
+                torch.save(model.state_dict(), f"{save_path}")
+                print(" ✓ (saved)")
+            else:
+                patience_counter += 1
+                print(f" (patience {patience_counter}/{patience})")
+                if patience_counter >= patience:
+                    print(f"\n✓ Early stopping at epoch {epoch+1}")
+                    break
         # Record losses
         loss_history['train'].append(train_loss)
         loss_history['val'].append(val_loss)
+    if val_loader is None:
+        torch.save(model.state_dict(), f"{save_path}")
+        print(" ✓ (saved final model)")
     return loss_history

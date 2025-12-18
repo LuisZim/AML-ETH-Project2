@@ -35,7 +35,7 @@ class FramesDataset(Dataset):
 
         # Resize to target size
         img = cv2.resize(img, self.target_size, interpolation=cv2.INTER_LINEAR)
-        mask = cv2.resize(mask, self.target_size, interpolation=cv2.INTER_NEAREST)
+        mask = cv2.resize(mask, self.target_size, interpolation=cv2.INTER_LINEAR)
 
         # Normalize image to 0..1 float
         img = img.astype('float32') / 255.0
