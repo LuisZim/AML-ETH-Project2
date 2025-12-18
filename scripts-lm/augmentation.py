@@ -116,11 +116,17 @@ def _ensure_4d(t: torch.Tensor) -> torch.Tensor:
 def apply_rotation_gpu(
     image_tensor: torch.Tensor,
     mask_tensor: torch.Tensor,
+    box_tensor: torch.Tensor | None = None,
     angle_range=(-15, 15),
     device: torch.device = torch.device("cuda"),
-) -> (torch.Tensor, torch.Tensor):
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    """
+    Rotate image, mask and optional box with the SAME randomly sampled angle.
+    """
     image_tensor = _ensure_4d(image_tensor)
     mask_tensor = _ensure_4d(mask_tensor)
+    if box_tensor is not None:
+        box_tensor = _ensure_4d(box_tensor)
 
     B, C, H, W = image_tensor.shape
     angle = random.uniform(angle_range[0], angle_range[1])
@@ -152,17 +158,38 @@ def apply_rotation_gpu(
     )
     mask_rot = (mask_rot > 0.5).float()
 
-    return img_rot, mask_rot
+    box_rot = None
+    if box_tensor is not None:
+        # Expand box to match batch size, then take first result (all are identical)
+        B_box, _, H_box, W_box = box_tensor.shape
+        box_exp = box_tensor.expand(B, -1, -1, -1)
+        box_rot_batch = KT.warp_affine(
+            box_exp.float(),
+            M,
+            dsize=(H, W),
+            mode="nearest",
+            padding_mode="zeros",
+            align_corners=False,
+        )
+        box_rot = (box_rot_batch[0:1] > 0.5).float()
+
+    return img_rot, mask_rot, box_rot
 
 
 def apply_zooming_gpu(
     image_tensor: torch.Tensor,
     mask_tensor: torch.Tensor,
+    box_tensor: torch.Tensor | None = None,
     zoom_range=(0.9, 1.1),
     device: torch.device = torch.device("cuda"),
-) -> (torch.Tensor, torch.Tensor):
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    """
+    Zoom image, mask and optional box with the SAME randomly sampled factor.
+    """
     image_tensor = _ensure_4d(image_tensor)
     mask_tensor = _ensure_4d(mask_tensor)
+    if box_tensor is not None:
+        box_tensor = _ensure_4d(box_tensor)
 
     B, C, H, W = image_tensor.shape
     zoom_factor = random.uniform(zoom_range[0], zoom_range[1])
@@ -194,17 +221,38 @@ def apply_zooming_gpu(
     )
     mask_zoom = (mask_zoom > 0.5).float()
 
-    return img_zoom, mask_zoom
+    box_zoom = None
+    if box_tensor is not None:
+        # Expand box to match batch size, then take first result (all are identical)
+        B_box, _, H_box, W_box = box_tensor.shape
+        box_exp = box_tensor.expand(B, -1, -1, -1)
+        box_zoom_batch = KT.warp_affine(
+            box_exp.float(),
+            M,
+            dsize=(H, W),
+            mode="nearest",
+            padding_mode="zeros",
+            align_corners=False,
+        )
+        box_zoom = (box_zoom_batch[0:1] > 0.5).float()
+
+    return img_zoom, mask_zoom, box_zoom
 
 
 def apply_sheering_gpu(
     image_tensor: torch.Tensor,
     mask_tensor: torch.Tensor,
+    box_tensor: torch.Tensor | None = None,
     shear_range=(-0.2, 0.2),
     device: torch.device = torch.device("cuda"),
-) -> (torch.Tensor, torch.Tensor):
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    """
+    Sheer image, mask and optional box with the SAME randomly sampled shear.
+    """
     image_tensor = _ensure_4d(image_tensor)
     mask_tensor = _ensure_4d(mask_tensor)
+    if box_tensor is not None:
+        box_tensor = _ensure_4d(box_tensor)
 
     B, C, H, W = image_tensor.shape
     shear = random.uniform(shear_range[0], shear_range[1])
@@ -244,17 +292,38 @@ def apply_sheering_gpu(
     )
     mask_shear = (mask_shear > 0.5).float()
 
-    return img_shear, mask_shear
+    box_shear = None
+    if box_tensor is not None:
+        # Expand box to match batch size, then take first result (all are identical)
+        B_box, _, H_box, W_box = box_tensor.shape
+        box_exp = box_tensor.expand(B, -1, -1, -1)
+        box_shear_batch = KT.warp_affine(
+            box_exp.float(),
+            M,
+            dsize=(H, W),
+            mode="nearest",
+            padding_mode="zeros",
+            align_corners=False,
+        )
+        box_shear = (box_shear_batch[0:1] > 0.5).float()
+
+    return img_shear, mask_shear, box_shear
 
 
 def apply_translation_gpu(
     image_tensor: torch.Tensor,
     mask_tensor: torch.Tensor,
+    box_tensor: torch.Tensor | None = None,
     translate_range=(-10, 10),
     device: torch.device = torch.device("cuda"),
-) -> (torch.Tensor, torch.Tensor):
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor | None]:
+    """
+    Translate image, mask and optional box with the SAME randomly sampled shift.
+    """
     image_tensor = _ensure_4d(image_tensor)
     mask_tensor = _ensure_4d(mask_tensor)
+    if box_tensor is not None:
+        box_tensor = _ensure_4d(box_tensor)
 
     B, C, H, W = image_tensor.shape
     tx = random.randint(translate_range[0], translate_range[1])
@@ -287,13 +356,29 @@ def apply_translation_gpu(
     )
     mask_trans = (mask_trans > 0.5).float()
 
-    return img_trans, mask_trans
+    box_trans = None
+    if box_tensor is not None:
+        # Expand box to match batch size, then take first result (all are identical)
+        B_box, _, H_box, W_box = box_tensor.shape
+        box_exp = box_tensor.expand(B, -1, -1, -1)
+        box_trans_batch = KT.warp_affine(
+            box_exp.float(),
+            M,
+            dsize=(H, W),
+            mode="nearest",
+            padding_mode="zeros",
+            align_corners=False,
+        )
+        box_trans = (box_trans_batch[0:1] > 0.5).float()
+
+    return img_trans, mask_trans, box_trans
 
 
 # ------------------------------
 # CPU elastic deformation (per frame)
 # ------------------------------
 
+# TODO: currently dead function, refactor from case section to this function here again later.
 def apply_deformation_grid(
     image: np.ndarray,
     mask: np.ndarray,
@@ -353,34 +438,30 @@ def augment_sample_single_strategy(
         # video: (H, W, T) -> (T, 1, H, W)
         video_tensor = torch.from_numpy(video.transpose(2, 0, 1)).float().unsqueeze(1).to(device)
         label_tensor = torch.from_numpy(label.transpose(2, 0, 1).astype(np.float32)).unsqueeze(1).to(device)
+        box_tensor = torch.from_numpy(box.astype(np.float32)).unsqueeze(0).unsqueeze(0).to(device)  # (1,1,H,W)
 
         if strategy == "rotation":
-            video_tensor, label_tensor = apply_rotation_gpu(video_tensor, label_tensor, device=device)
+            video_tensor, label_tensor, box_tensor = apply_rotation_gpu(
+                video_tensor, label_tensor, box_tensor, device=device
+            )
         elif strategy == "scaling":
-            video_tensor, label_tensor = apply_zooming_gpu(video_tensor, label_tensor, device=device)
+            video_tensor, label_tensor, box_tensor = apply_zooming_gpu(
+                video_tensor, label_tensor, box_tensor, device=device
+            )
         elif strategy == "sheering":
-            video_tensor, label_tensor = apply_sheering_gpu(video_tensor, label_tensor, device=device)
+            video_tensor, label_tensor, box_tensor = apply_sheering_gpu(
+                video_tensor, label_tensor, box_tensor, device=device
+            )
         elif strategy == "translation":
-            video_tensor, label_tensor = apply_translation_gpu(video_tensor, label_tensor, device=device)
+            video_tensor, label_tensor, box_tensor = apply_translation_gpu(
+                video_tensor, label_tensor, box_tensor, device=device
+            )
 
         video_aug = video_tensor.squeeze(1).cpu().numpy().transpose(1, 2, 0).astype(np.uint8)
         label_aug = label_tensor.squeeze(1).cpu().numpy().transpose(1, 2, 0)
         label_aug = (label_aug > 0.5).astype(bool)
 
-        # Apply same transform to 2D box
-        box_tensor = torch.from_numpy(box.astype(np.float32)).unsqueeze(0).unsqueeze(0).to(device)
-        box_mask_tensor = box_tensor.clone()
-
-        if strategy == "rotation":
-            _, box_mask_tensor = apply_rotation_gpu(box_tensor, box_mask_tensor, device=device)
-        elif strategy == "scaling":
-            _, box_mask_tensor = apply_zooming_gpu(box_tensor, box_mask_tensor, device=device)
-        elif strategy == "sheering":
-            _, box_mask_tensor = apply_sheering_gpu(box_tensor, box_mask_tensor, device=device)
-        elif strategy == "translation":
-            _, box_mask_tensor = apply_translation_gpu(box_tensor, box_mask_tensor, device=device)
-
-        box_aug = (box_mask_tensor.squeeze().cpu().numpy() > 0.5).astype(bool)
+        box_aug = (box_tensor.squeeze().cpu().numpy() > 0.5).astype(bool) # maybe continuous later
 
         augmented["video"] = video_aug
         augmented["label"] = label_aug
@@ -388,19 +469,28 @@ def augment_sample_single_strategy(
         return augmented
 
     elif strategy == "deformation":
-        # Elastic deformation on CPU, frame by frame
-        video_aug = video.copy()
-        label_aug = label.copy()
-        for t in range(T):
-            frame = video[:, :, t]
-            mask = label[:, :, t]
-            frame_def, mask_def = apply_deformation_grid(frame, mask)
-            video_aug[:, :, t] = frame_def
-            label_aug[:, :, t] = mask_def
+        # Elastic deformation on CPU: apply the SAME deformation field to video, label and box.
+        # We deform along the spatial axes (H, W) and broadcast over time (T) for video/label.
+        sigma = 5
+        points = 3
 
-        # Deform box as well
-        box_img, box_mask = apply_deformation_grid(box.astype(np.uint8) * 255, box)
-        box_aug = box_mask
+        video_f = video.astype(np.float32)   # shape (H, W, T)
+        label_f = label.astype(np.float32)   # shape (H, W, T)
+        box_f = box.astype(np.float32)       # shape (H, W)
+
+        deformed_video, deformed_label, deformed_box = elasticdeform.deform_random_grid(
+            [video_f, label_f, box_f],
+            sigma=sigma,
+            points=points,
+            mode="constant",
+            cval=0,
+            order=[1, 0, 0],  # bilinear for video, nearest for label and box
+            axis=(0, 1),      # deform over H,W; T is left as-is
+        )
+
+        video_aug = np.clip(deformed_video, 0, 255).astype(np.uint8)
+        label_aug = (deformed_label > 0.5).astype(bool)
+        box_aug = (deformed_box > 0.5).astype(bool)
 
         augmented["video"] = video_aug
         augmented["label"] = label_aug
