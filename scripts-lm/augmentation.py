@@ -34,7 +34,7 @@ It:
 - loads `data/raw/train.pkl` (gzipped pickle, same format as in the notebooks),
 - applies ONE of the 5 augmentation strategies to each sample,
 - creates N augmented versions per original sample (default: 1),
-- writes the augmented samples to a gzipped pickle file at the given output path.
+- writes only the augmented samples (without the original ones) to a gzipped pickle file at the given output path.
 
 Augmentation strategies (single-choice via CLI):
 - rotation
@@ -302,29 +302,31 @@ def apply_deformation_grid(
     alpha: float = 50,
 ) -> (np.ndarray, np.ndarray):
     """
-    Apply elastic deformation to one frame + mask.
+    Apply elastic deformation to one frame + mask using the SAME deformation field.
 
-    This follows the implementation in the augmentation notebook.
+    We stack image and mask along a new axis so that elasticdeform uses one
+    random grid for both. Interpolation order is set separately for image (1)
+    and mask (0) to preserve binary labels.
     """
-    deformed_img = elasticdeform.deform_random_grid(
-        image,
-        sigma=sigma,
-        points=points,
-        mode="constant",
-        cval=0,
-        order=1,
+    # Stack image and mask: shape (2, H, W)
+    stacked = np.stack(
+        [image.astype(np.float32), mask.astype(np.float32)],
+        axis=0,
     )
-    deformed_img = np.clip(deformed_img, 0, 255).astype(np.uint8)
 
-    deformed_mask = elasticdeform.deform_random_grid(
-        mask.astype(float),
+    # Deform both with the same random grid; order per channel: [image_order, mask_order]
+    deformed = elasticdeform.deform_random_grid(
+        stacked,
         sigma=sigma,
         points=points,
         mode="constant",
         cval=0,
-        order=0,
+        order=[1, 0],
+        axis=(1, 2),
     )
-    deformed_mask = (deformed_mask > 0.5).astype(bool)
+
+    deformed_img = np.clip(deformed[0], 0, 255).astype(np.uint8)
+    deformed_mask = (deformed[1] > 0.5).astype(bool)
 
     return deformed_img, deformed_mask
 
@@ -460,6 +462,11 @@ def parse_args() -> argparse.Namespace:
         help="Random seed for reproducibility (default: 42).",
     )
     parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Run augmentation without writing any output file. Useful for testing.",
+    )
+    parser.add_argument(
         "--cpu-only",
         action="store_true",
         help="Force CPU even if a CUDA GPU is available.",
@@ -493,21 +500,35 @@ def main() -> None:
     print(f"Num augmentations per sample: {args.num_augmentations}")
     print(f"Seed: {args.seed}")
     print(f"Using device: {device}")
+    print(f"Dry run: {args.dry_run}")
+    print()
 
+    # Basic input existence check (even in dry-run) to catch obvious issues
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    print("Loading training data...")
+    # In dry-run mode, we do not load data or perform any augmentation.
+    if args.dry_run:
+        print("Dry-run requested:")
+        print("  - No training data will be loaded")
+        print("  - No augmentations will be computed")
+        print("  - No output file will be written")
+        print()
+        print("This is what would happen in a normal run:")
+        print(f"  - Load: {input_path}")
+        print(f"  - Strategy: {args.strategy}")
+        print(f"  - Augmentations per original sample: {args.num_augmentations}")
+        print(f"  - Expected augmented samples: <len(train_data)> * {args.num_augmentations}")
+        print(f"  - Save augmented data to: {output_path}")
+        return
+
+    print(f"Loading training data from {input_path} ...")
     train_data: List[Dict[str, Any]] = load_zipped_pickle(input_path)
     print(f"Loaded {len(train_data)} samples.")
 
     augmented_data: List[Dict[str, Any]] = []
 
-    # Keep original samples untouched
-    for sample in tqdm(train_data, desc="Copying original samples"):
-        augmented_data.append(sample.copy())
-
-    # Generate augmented samples
+    # Generate augmented samples (no raw copies, for easier merging with raw/train.pkl)
     total_to_add = len(train_data) * args.num_augmentations
     print(f"Generating {args.num_augmentations} augmented samples per original "
           f"({total_to_add} augmented samples in total)...")
@@ -520,10 +541,10 @@ def main() -> None:
             aug_sample["name"] = f"{base_name}_{args.strategy}_aug{k + 1}"
             augmented_data.append(aug_sample)
 
-    print(f"Final dataset size: {len(augmented_data)} "
-          f"(original: {len(train_data)}, augmented: {len(augmented_data) - len(train_data)})")
+    print(f"Final augmented dataset size: {len(augmented_data)} "
+          f"(augmented only, originals not included)")
 
-    print("Saving augmented data...")
+    print(f"Saving augmented data to {output_path} ...")
     save_zipped_pickle(augmented_data, output_path)
     print("Done.")
 
