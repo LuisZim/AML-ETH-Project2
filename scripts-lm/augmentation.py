@@ -304,32 +304,26 @@ def apply_deformation_grid(
     """
     Apply elastic deformation to one frame + mask using the SAME deformation field.
 
-    We stack image and mask along a new axis so that elasticdeform uses one
-    random grid for both. Interpolation order is set separately for image (1)
-    and mask (0) to preserve binary labels.
+    We pass [image, mask] as a list of inputs to elasticdeform so that both share
+    one random grid. Interpolation order is set separately for image (1) and
+    mask (0) to preserve binary labels.
     """
-    # Stack image and mask: shape (2, H, W)
-    stacked = np.stack(
-        [image.astype(np.float32), mask.astype(np.float32)],
-        axis=0,
-    )
+    img_f = image.astype(np.float32)
+    mask_f = mask.astype(np.float32)
 
-    # Deform both with the same random grid; order per channel: [image_order, mask_order]
-    deformed = elasticdeform.deform_random_grid(
-        stacked,
+    deformed_img, deformed_mask = elasticdeform.deform_random_grid(
+        [img_f, mask_f],
         sigma=sigma,
         points=points,
         mode="constant",
         cval=0,
-        order=[1, 0],
-        axis=(1, 2),
+        order=[1, 0],  # bilinear for image, nearest for mask
     )
 
-    deformed_img = np.clip(deformed[0], 0, 255).astype(np.uint8)
-    deformed_mask = (deformed[1] > 0.5).astype(bool)
+    deformed_img = np.clip(deformed_img, 0, 255).astype(np.uint8)
+    deformed_mask = (deformed_mask > 0.5).astype(bool)
 
     return deformed_img, deformed_mask
-
 
 # ------------------------------
 # Per-sample augmentation (ONE strategy)
@@ -533,7 +527,7 @@ def main() -> None:
     print(f"Generating {args.num_augmentations} augmented samples per original "
           f"({total_to_add} augmented samples in total)...")
 
-    for sample in tqdm(train_data, desc="Augmenting samples"):
+    for sample in tqdm(train_data, desc=f"Augment {args.strategy}"):
         for k in range(args.num_augmentations):
             aug_sample = augment_sample_single_strategy(sample, args.strategy, device=device)
             # Name augmentation for bookkeeping; user can also encode this in the output filename
