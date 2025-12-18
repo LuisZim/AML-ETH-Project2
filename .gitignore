@@ -1,4 +1,5 @@
 hidden-*
+requirements-*subdeps.txt
 
 # Python
 __pycache__/
@@ -7,7 +8,7 @@ __pycache__/
 *.pyd
 
 # Virtual environment
-.venv/
+.venv*
 venv/
 env/
 
@@ -21,3 +22,10 @@ env/
 *.csv
 *.h5
 *.pkl
+
+# weights and models and data
+*.pth
+data/
+
+# cursor rules
+.cursorrules
