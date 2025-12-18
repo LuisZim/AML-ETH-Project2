@@ -23,8 +23,9 @@ env/
 *.h5
 *.pkl
 
-# weights and models
+# weights and models and data
 *.pth
+data/
 
 # cursor rules
 .cursorrules

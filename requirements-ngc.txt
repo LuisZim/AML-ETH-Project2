@@ -26,4 +26,5 @@ imageio>=2.34
 
 ## Augmentation
 elasticdeform>=0.4.0
+kornia>=0.7.0
 
